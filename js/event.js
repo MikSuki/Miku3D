@@ -1,23 +1,24 @@
-document.addEventListener('keydown', function (event) {
+
+
+onkeydown = onkeyup = function (e) {
+    key[e.keyCode] = e.type == 'keydown'
     // up
-    if (event.keyCode == 87) {
-        player.walk(0)
-    }
+    if (key[87])
+        player.walkDir = 0
     // down
-    else if (event.keyCode == 83) {
-        player.walk(1)
-    }
+    else if (key[83])
+        player.walkDir = 1
     // left
-    else if (event.keyCode == 65) {
-        player.walk(2)
-    }
+    else if (key[65])
+        player.walkDir = 2
     // right
-    else if (event.keyCode == 68) {
-        player.walk(3)
-    }
+    else if (key[68])
+        player.walkDir = 3
+    else
+        player.walkDir = -1
     // jump
-    if (event.keyCode == 32) {
-        if(player.isJump == false)
+    if (key[32]) {
+        if (player.isJump == false)
             player.isJump = true
     }
-});
+}

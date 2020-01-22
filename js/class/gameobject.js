@@ -17,6 +17,8 @@ class GameObject {
                 z: sz || 1
             },
         }
+        this.theta = 0
+        this.vertex = []
         this.texture = null
         this.modelMatrix = null
         
@@ -59,17 +61,33 @@ class GameObject {
         this.modelMatrix = matrix
     }
 
-    translate(x, y, z, update) {
+    translate(x, y, z) {
         this.transform.position.x += x
         this.transform.position.y += y
         this.transform.position.z += z
-        if(this.collider != null){
+        if(this.collider != null && this.vertex != undefined && this.colliderRadius != undefined){
             this.collider.minX += x
             this.collider.maxX += x
             this.collider.minY += y
             this.collider.maxY += y
             this.collider.minZ += z
             this.collider.maxZ += z
+            //this.colliderTheta
+            this.vertex = []
+            for(let i = 0; i < 4; ++i){
+                let theta = this.theta + this.colliderTheta[i]
+                this.vertex.push({
+                    x: this.transform.position.x + this.colliderRadius * Math.cos(theta),
+                    y: this.transform.position.z + this.colliderRadius * Math.sin(theta)
+                })
+            }
+            // console.log('vertex')
+            // console.log(
+            //     this.vertex[0],
+            //     this.vertex[1],
+            //     this.vertex[2],
+            //     this.vertex[3],
+            // )
         }
         mat4.translate(
             this.modelMatrix,

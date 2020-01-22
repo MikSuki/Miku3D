@@ -17,6 +17,8 @@ class Character extends GameObject {
         this.models.left_leg.texture = [7, 8, 8, 8, 8, 8]
         this.models.right_leg.texture = [7, 8, 8, 8, 8, 8]
 
+        this.walkDir = -1
+
 
         this.isJump = false
         this.jumpForce = 0.2
@@ -27,37 +29,28 @@ class Character extends GameObject {
             maxX: 1,
             minY: -7,
             maxY: 1,
-            minZ: -1,
-            maxZ: 1
+            minZ: -0.5,
+            maxZ: 0.5,
         }
-    }
-
-    update() {
-        if (this.isJump) {
-            if (this.jumpCnt > 20)
-                this.translate(
-                    0,
-                    this.jumpForce,
-                    0,
-                    true
-                )
-            else if (this.jumpCnt > 0)
-                this.translate(
-                    0,
-                    -this.jumpForce,
-                    0,
-                    true
-                )
-            else {
-                this.isJump = false
-                this.jumpCnt = 40 + 1
-            }
-            --this.jumpCnt
-        }
+        var theta = Math.atan(0.5 / 1) * 180 / Math.PI
+        this.colliderRadius = Math.sqrt(1 + 0.5 ** 2)
+        this.colliderTheta = [
+            (90 - theta) / 180 * Math.PI,
+            (90 + theta) / 180 * Math.PI,
+            (270 - theta) / 180 * Math.PI,
+            (270 + theta) / 180 * Math.PI
+        ]
 
     }
 
-    walk(mode) {
+    update(deltaTime) {
+        if (this.walkDir != -1)
+            this.walk(deltaTime)
+        if (this.isJump) 
+            this.jump()
+    }
+
+    walk(deltaTime) {
         let forward = vec3.create(),
             right = vec3.create(),
             v1 = 0, v2 = 0;
@@ -79,7 +72,7 @@ class Character extends GameObject {
             )
         )
 
-        switch (mode) {
+        switch (this.walkDir) {
             case 0:
                 [v1, v2] = [-forward[0], -forward[2]]
                 break;
@@ -93,45 +86,78 @@ class Character extends GameObject {
                 [v1, v2] = [right[0], right[2]]
                 break
         }
+        v1 *= deltaTime
+        v2 *= deltaTime
+
+
+        // angle
+        let dot = -v1 * 1
+        let len = Math.sqrt(v1 ** 2 + v2 ** 2) * 1
+        let theta = Math.acos(dot / len)
+        if (v2 < 0) theta = - theta
+        this.theta = theta
+
+        let shapeA = {
+            x: this.transform.position.x + v1,
+            y: this.transform.position.z + v2,
+            vertex: []
+        }
+        for (let i = 0; i < 4; ++i) {
+            let theta = this.theta + this.colliderTheta[i]
+            shapeA.vertex.push({
+                x: shapeA.x + this.colliderRadius * Math.cos(theta),
+                y: shapeA.y + this.colliderRadius * Math.sin(theta)
+            })
+        }
+        let shapeB = {
+            x: models.ground[models.ground.length - 1].transform.position.x,
+            y: models.ground[models.ground.length - 1].transform.position.z,
+            vertex: [
+                { x: models.ground[models.ground.length - 1].collider.minX, y: models.ground[models.ground.length - 1].collider.minZ },
+                { x: models.ground[models.ground.length - 1].collider.maxX, y: models.ground[models.ground.length - 1].collider.minZ },
+                { x: models.ground[models.ground.length - 1].collider.maxX, y: models.ground[models.ground.length - 1].collider.maxZ },
+                { x: models.ground[models.ground.length - 1].collider.minX, y: models.ground[models.ground.length - 1].collider.maxZ },
+            ]
+        }
+        let depth = gjk(shapeA, shapeB)
+
+
+        if (depth != -1 && this.collider.minY < models.ground[models.ground.length - 1].collider.maxY) {
+            let vert_angle = edge2(
+                models.ground[models.ground.length - 1].collider,
+                {
+                    x: shapeA.x - v1,
+                    y: shapeA.y - v2
+                },
+                shapeA.vertex[0],
+                shapeA.vertex[3]
+            );
+            v1 += depth * Math.cos(vert_angle)
+            v2 += depth * Math.sin(vert_angle)
+        }
 
         this.translate(
             v1,
             0,
-            v2,
-            false
+            v2
         )
 
-        if(intersect(this.collider, models.ground[models.ground.length - 1].collider)){
-            console.log('collider')
-            console.log(this.collider)
-            /*
-            console.log(models.ground[models.ground.length - 1].collider)
-            this.translate(
-                -v1,
-                0,
-                -v2,
-                false
-            )
-            return*/
-        }
         camera.translate(
             v1,
             0,
-            v2,
-            false
+            v2
         )
 
+        // mat4.set(
+        //     this.modelMatrix,
+        //     this.modelMatrix[0], this.modelMatrix[1], this.modelMatrix[2], 0,
+        //     this.modelMatrix[4], this.modelMatrix[5], this.modelMatrix[6], 0,
+        //     this.modelMatrix[8], this.modelMatrix[9], this.modelMatrix[10], 0,
+        //     this.transform.position.x, this.transform.position.y, this.transform.position.z, 1
+        // )
 
-        mat4.set(
-            this.modelMatrix,
-            this.modelMatrix[0], this.modelMatrix[1], this.modelMatrix[2], 0,
-            this.modelMatrix[4], this.modelMatrix[5], this.modelMatrix[6], 0,
-            this.modelMatrix[8], this.modelMatrix[9], this.modelMatrix[10], 0,
-            this.transform.position.x, this.transform.position.y, this.transform.position.z, 1
-        )
 
-
-        switch (mode) {
+        switch (this.walkDir) {
             case 0:
                 mat4.set(
                     this.modelMatrix,
@@ -170,7 +196,28 @@ class Character extends GameObject {
                 break
         }
 
-
         camera.updateMatrix()
+    }
+
+    jump() {
+        if (this.jumpCnt > 20)
+            this.translate(
+                0,
+                this.jumpForce,
+                0,
+                true
+            )
+        else if (this.jumpCnt > 0)
+            this.translate(
+                0,
+                -this.jumpForce,
+                0,
+                true
+            )
+        else {
+            this.isJump = false
+            this.jumpCnt = 40 + 1
+        }
+        --this.jumpCnt
     }
 }

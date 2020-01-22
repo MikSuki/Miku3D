@@ -28,3 +28,5 @@ var projectionMatrix, viewMatrix;
 var look;
 var buffer2;
 var ground = []
+
+var key = { 87: false, 83: false, 65: false, 68: false }

@@ -4,7 +4,7 @@ function setCns() {
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
 
-    gl = canvas.getContext("webgl", {premultipliedAlpha: false});
+    gl = canvas.getContext("webgl", { premultipliedAlpha: false });
 
     if (gl === null) {
         alert("無法初始化 WebGL，您的瀏覽器不支援。");
@@ -513,7 +513,7 @@ function drawScene(gl) {
     }
 
     // ground
-    for (var ii = 0; ii < models.ground.length; ++ii) {
+    for (var ii = models.ground.length - 1/*0*/; ii < models.ground.length; ++ii) {
         var matrix = models.ground[ii].modelMatrix
         // color buffer
         {
@@ -685,16 +685,16 @@ window.onload = () => {
         }
     }
 
-    ground.push(new GameObject(6, -6, 6))
-    ground[ground.length - 1].setScale(1, 1, 1, true)
+    ground.push(new GameObject(0, -6, 6))
+    ground[ground.length - 1].setScale(5, 1, 1, true)
 
     ground[ground.length - 1].collider = {
-        minX: 5,
-        maxX: 7,
+        minX: ground[ground.length - 1].transform.position.x - 5,
+        maxX: ground[ground.length - 1].transform.position.x + 5,
         minY: -7,
         maxY: -5,
-        minZ: 5,
-        maxZ: 7
+        minZ: ground[ground.length - 1].transform.position.z - 1,
+        maxZ: ground[ground.length - 1].transform.position.z + 1
     }
 
 
@@ -731,40 +731,19 @@ window.onload = () => {
     camera.isLookAt = true
     camera.translate(0, 0, -30, true)
 
-
     player = new Character(0, 0, 0, 1, 1, 1)
-
-    
 
 
     camera.lookPt = player
     camera.updateMatrix()
-    let forward = vec3.create(),
-        right = vec3.create();
 
-    vec3.normalize(
-        forward,
-        vec3.fromValues(
-            camera.modelMatrix[2],
-            0,
-            camera.modelMatrix[10]
-        )
-    )
-    vec3.normalize(
-        right,
-        vec3.fromValues(
-            camera.modelMatrix[0],
-            0,
-            camera.modelMatrix[8]
-        )
-    )
-    mat4.set(
-        camera.lookPt.modelMatrix,
-        -right[0], 0, forward[0], 0,
-        0, 1, 0, 0,
-        -right[2], 0, forward[2], 0,
-        camera.lookPt.transform.position.x, camera.lookPt.transform.position.y, camera.lookPt.transform.position.z, 1
-    )
+    // mat4.set(
+    //     camera.lookPt.modelMatrix,
+    //     -camera.modelMatrix[0], 0, camera.modelMatrix[2], 0,
+    //     0, 1, 0, 0,
+    //     -camera.modelMatrix[8], 0, camera.modelMatrix[10], 0,
+    //     camera.lookPt.transform.position.x, camera.lookPt.transform.position.y, camera.lookPt.transform.position.z, 1
+    // )
 
 
     buffer2 = initBuffers2(gl)
@@ -772,18 +751,187 @@ window.onload = () => {
 
     var then = 0;
     // Draw the scene repeatedly
-    function render(now) {
-        now *= 0.001;  // convert to seconds
-        const deltaTime = now - then;
-        then = now;
+    function render(deltaTime) {
         //viewMatrix = createViewMat()
         // squareRotation += deltaTime * 2;
         // cubeRotation += deltaTime * 2;
-        player.update()
         drawScene(gl, deltaTime);
-        requestAnimationFrame(render);
+
     }
-    requestAnimationFrame(render);
+    function loop(now) {
+        now *= 0.001;  // convert to seconds
+        const deltaTime = now - then;
+        then = now;
+        player.update(deltaTime)
+        render(deltaTime)
+        requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
 }
 
 
+function edge(vertex, dir) {
+    let index = 0
+    for (let i = 0, max = Number.MIN_SAFE_INTEGER; i < vertex.length; ++i) {
+        let proj = dot(vertex[i], dir)
+        if (proj > max) {
+            max = proj
+            index = i
+        }
+    }
+    let v = vertex[index]
+    let v1 = index == vertex.length - 1 ? vertex[0] : vertex[index + 1]
+    let v0 = index == 0 ? vertex[vertex.length - 1] : vertex[index - 1]
+    let l = normalize({
+        x: v.x - v1.x,
+        y: v.y - v1.y
+    })
+    let r = normalize({
+        x: v.x - v0.x,
+        y: v.y - v0.y
+    })
+
+    if (dot(r, dir) <= dot(l, dir)) {
+        return showV(v0, v)
+    } else {
+        return showV(v, v1)
+    }
+
+    function showV(v1, v2) {
+        let a = -1, b = -1;
+        for (let i = 0; i < vertex.length; ++i) {
+            if (vertex[i] === v1) {
+                a = i
+            }
+            else if (vertex[i] === v2) {
+                b = i
+            }
+        }
+        // console.log(a + 1, b + 1)
+        // console.log(vertex[a], vertex[b])
+        return {
+            x: vertex[a].x - vertex[b].x,
+            y: vertex[a].y - vertex[b].y
+        }
+    }
+}
+
+function edge2(boundary, center, left, right) {
+    let v = posIn3by3(center)
+    // console.log('v: ' + v)
+    // console.log('v_left: ' + v_left)
+    // console.log('v_right: ' + v_right)
+    // console.log('----------')
+
+    if (v % 2 == 0) {
+        let v_left = posIn3by3(left)
+        let v_right = posIn3by3(right)
+        switch (v) {
+            case 0:
+                if (v_left == 4)
+                    v = 3
+                else if (v_right == 4)
+                    v = 1
+                else
+                    v = 1
+                break
+            case 2:
+                if (v_left == 4)
+                    v = 1
+                else if (v_right == 4)
+                    v = 5
+                else
+                    v = 1
+                break
+            case 6:
+                if (v_left == 4)
+                    v = 7
+                else if (v_right == 4)
+                    v = 3
+                else
+                    v = 7
+                break
+            case 8:
+                if (v_left == 4)
+                    v = 5
+                else if (v_right == 4)
+                    v = 7
+                else
+                    v = 7
+                break
+        }
+    }
+    switch (v) {
+        case 1:
+            side = {
+                x: boundary.maxX - boundary.minX,
+                y: 0
+            }
+            break
+        case 3:
+            side = {
+                x: 0,
+                y: boundary.minZ - boundary.maxZ
+            }
+            break
+        case 5:
+            side = {
+                x: 0,
+                y: boundary.maxZ - boundary.minZ
+            }
+            break
+        case 7:
+            side = {
+                x: boundary.minX - boundary.maxZ,
+                y: 0
+            }
+            break
+    }
+
+    return getVerticalAngle(side)
+
+    function posIn3by3(pos) {
+        let v = -1
+        if (pos.x < boundary.minX)
+            v = 0
+        else if (pos.x < boundary.maxX)
+            v = 1
+        else
+            v = 2
+
+        if (pos.y < boundary.minZ)
+            v += 0
+        else if (pos.y < boundary.maxZ)
+            v += 3
+        else
+            v += 6
+        return v
+    }
+}
+
+function getVerticalAngle(side) {
+    let side_angle = Math.acos(dot(side, { x: 1, y: 0 }) / length(side))
+    if (side.y < 0) side_angle *= -1
+    return side_angle - 1.571
+}
+
+
+function dot(vec1, vec2) {
+    return vec1.x * vec2.x + vec1.y * vec2.y
+}
+
+function length(vec) {
+    return Math.sqrt(vec.x ** 2 + vec.y ** 2)
+}
+
+function normalize(vec) {
+    let size = Math.sqrt(vec.x ** 2 + vec.y ** 2)
+    return {
+        x: vec.x / size,
+        y: vec.y / size
+    }
+}
+
+function cross(vec1, vec2) {
+    return vec1.x * vec2.y - vec1.y * vec2.x
+}
