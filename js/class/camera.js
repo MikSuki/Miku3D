@@ -8,7 +8,6 @@ class Camera extends GameObject {
 
     updateMatrix() {
         var matrix = mat4.create()
-
         mat4.set(
             matrix,
             matrix[0], matrix[1], matrix[2], matrix[3],
@@ -16,7 +15,6 @@ class Camera extends GameObject {
             matrix[8], matrix[9], matrix[10], matrix[11],
             this.transform.position.x, this.transform.position.y, this.transform.position.z, 1
         )
-
         if (this.isLookAt) {
             mat4.lookAt(
                 matrix,

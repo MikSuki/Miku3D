@@ -57,7 +57,6 @@ class GameObject {
             )
         )
 
-
         this.modelMatrix = matrix
     }
 
@@ -65,44 +64,39 @@ class GameObject {
         this.transform.position.x += x
         this.transform.position.y += y
         this.transform.position.z += z
-        if(this.collider != null && this.vertex != undefined && this.colliderRadius != undefined){
-            this.collider.minX += x
-            this.collider.maxX += x
-            this.collider.minY += y
-            this.collider.maxY += y
-            this.collider.minZ += z
-            this.collider.maxZ += z
-            //this.colliderTheta
-            this.vertex = []
-            for(let i = 0; i < 4; ++i){
-                let theta = this.theta + this.colliderTheta[i]
-                this.vertex.push({
-                    x: this.transform.position.x + this.colliderRadius * Math.cos(theta),
-                    y: this.transform.position.z + this.colliderRadius * Math.sin(theta)
-                })
-            }
-            // console.log('vertex')
-            // console.log(
-            //     this.vertex[0],
-            //     this.vertex[1],
-            //     this.vertex[2],
-            //     this.vertex[3],
-            // )
-        }
-        mat4.translate(
-            this.modelMatrix,
-            this.modelMatrix,
-            vec3.fromValues(
-                x,
-                y,
-                z
-            )
-        )
-
-        // if (update)
-        //     this.updateMatrix()
-
-
+        // if(this.collider != null && this.vertex != undefined && this.colliderRadius != undefined){
+        //     this.collider.minX += x
+        //     this.collider.maxX += x
+        //     this.collider.minY += y
+        //     this.collider.maxY += y
+        //     this.collider.minZ += z
+        //     this.collider.maxZ += z
+        //     //this.colliderTheta
+        //     this.vertex = []
+        //     for(let i = 0; i < 4; ++i){
+        //         let theta = this.theta + this.colliderTheta[i]
+        //         this.vertex.push({
+        //             x: this.transform.position.x + this.colliderRadius * Math.cos(theta),
+        //             y: this.transform.position.z + this.colliderRadius * Math.sin(theta)
+        //         })
+        //     }
+        //     // console.log('vertex')
+        //     // console.log(
+        //     //     this.vertex[0],
+        //     //     this.vertex[1],
+        //     //     this.vertex[2],
+        //     //     this.vertex[3],
+        //     // )
+        // }
+        // mat4.translate(
+        //     this.modelMatrix,
+        //     this.modelMatrix,
+        //     vec3.fromValues(
+        //         x,
+        //         y,
+        //         z
+        //     )
+        // )
     }
 
     rotate(yaw, pitch, update) {
@@ -113,12 +107,22 @@ class GameObject {
             this.updateMatrix()
     }
 
-    setTranslation(x, y, z, update) {
-        this.transform.position.x = x
-        this.transform.position.y = y
-        this.transform.position.z = z
-        if (update)
-            this.updateMatrix()
+    setTranslation() {
+        this.modelMatrix[12] = this.transform.position.x
+        this.modelMatrix[13] = this.transform.position.y
+        this.modelMatrix[14] = this.transform.position.z
+    }
+
+    setRotate(v0, v1, v2, v4, v5, v6, v8, v9, v10){
+        this.modelMatrix[0] = v0
+        this.modelMatrix[1] = v1
+        this.modelMatrix[2] = v2
+        this.modelMatrix[4] = v4
+        this.modelMatrix[5] = v5
+        this.modelMatrix[6] = v6
+        this.modelMatrix[8] = v8
+        this.modelMatrix[9] = v9
+        this.modelMatrix[10] = v10
     }
 
     setScale(x, y, z, update) {

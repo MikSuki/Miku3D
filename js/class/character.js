@@ -44,10 +44,13 @@ class Character extends GameObject {
     }
 
     update(deltaTime) {
+        if (this.isJump)
+            this.jump()
         if (this.walkDir != -1)
             this.walk(deltaTime)
-        if (this.isJump) 
-            this.jump()
+
+        this.setTranslation()
+        camera.updateMatrix()
     }
 
     walk(deltaTime) {
@@ -86,54 +89,53 @@ class Character extends GameObject {
                 [v1, v2] = [right[0], right[2]]
                 break
         }
-        v1 *= deltaTime
-        v2 *= deltaTime
+        v1 *= deltaTime * 10
+        v2 *= deltaTime * 10
 
+        if (this.collider.minY < models.ground[models.ground.length - 1].collider.maxY) {
+            // angle
+            let dot = -v1 * 1
+            let len = Math.sqrt(v1 ** 2 + v2 ** 2) * 1
+            let theta = Math.acos(dot / len)
+            if (v2 < 0) theta = - theta
+            this.theta = theta
 
-        // angle
-        let dot = -v1 * 1
-        let len = Math.sqrt(v1 ** 2 + v2 ** 2) * 1
-        let theta = Math.acos(dot / len)
-        if (v2 < 0) theta = - theta
-        this.theta = theta
-
-        let shapeA = {
-            x: this.transform.position.x + v1,
-            y: this.transform.position.z + v2,
-            vertex: []
-        }
-        for (let i = 0; i < 4; ++i) {
-            let theta = this.theta + this.colliderTheta[i]
-            shapeA.vertex.push({
-                x: shapeA.x + this.colliderRadius * Math.cos(theta),
-                y: shapeA.y + this.colliderRadius * Math.sin(theta)
-            })
-        }
-        let shapeB = {
-            x: models.ground[models.ground.length - 1].transform.position.x,
-            y: models.ground[models.ground.length - 1].transform.position.z,
-            vertex: [
-                { x: models.ground[models.ground.length - 1].collider.minX, y: models.ground[models.ground.length - 1].collider.minZ },
-                { x: models.ground[models.ground.length - 1].collider.maxX, y: models.ground[models.ground.length - 1].collider.minZ },
-                { x: models.ground[models.ground.length - 1].collider.maxX, y: models.ground[models.ground.length - 1].collider.maxZ },
-                { x: models.ground[models.ground.length - 1].collider.minX, y: models.ground[models.ground.length - 1].collider.maxZ },
-            ]
-        }
-        let depth = gjk(shapeA, shapeB)
-
-
-        if (depth != -1 && this.collider.minY < models.ground[models.ground.length - 1].collider.maxY) {
-            let vert_angle = edge2(
-                models.ground[models.ground.length - 1].collider,
-                {
-                    x: shapeA.x - v1,
-                    y: shapeA.y - v2
-                },
-                shapeA.vertex[0],
-                shapeA.vertex[3]
-            );
-            v1 += depth * Math.cos(vert_angle)
-            v2 += depth * Math.sin(vert_angle)
+            let shapeA = {
+                x: this.transform.position.x + v1,
+                y: this.transform.position.z + v2,
+                vertex: []
+            }
+            for (let i = 0; i < 4; ++i) {
+                let theta = this.theta + this.colliderTheta[i]
+                shapeA.vertex.push({
+                    x: shapeA.x + this.colliderRadius * Math.cos(theta),
+                    y: shapeA.y + this.colliderRadius * Math.sin(theta)
+                })
+            }
+            let shapeB = {
+                x: models.ground[models.ground.length - 1].transform.position.x,
+                y: models.ground[models.ground.length - 1].transform.position.z,
+                vertex: [
+                    { x: models.ground[models.ground.length - 1].collider.minX, y: models.ground[models.ground.length - 1].collider.minZ },
+                    { x: models.ground[models.ground.length - 1].collider.maxX, y: models.ground[models.ground.length - 1].collider.minZ },
+                    { x: models.ground[models.ground.length - 1].collider.maxX, y: models.ground[models.ground.length - 1].collider.maxZ },
+                    { x: models.ground[models.ground.length - 1].collider.minX, y: models.ground[models.ground.length - 1].collider.maxZ },
+                ]
+            }
+            let depth = gjk(shapeA, shapeB)
+            if (depth != -1) {
+                let vert_angle = getVerticalAngle(
+                    models.ground[models.ground.length - 1].collider,
+                    {
+                        x: shapeA.x - v1,
+                        y: shapeA.y - v2
+                    },
+                    shapeA.vertex[0],
+                    shapeA.vertex[3]
+                );
+                v1 += depth * Math.cos(vert_angle)
+                v2 += depth * Math.sin(vert_angle)
+            }
         }
 
         this.translate(
@@ -141,79 +143,55 @@ class Character extends GameObject {
             0,
             v2
         )
-
         camera.translate(
             v1,
             0,
             v2
         )
 
-        // mat4.set(
-        //     this.modelMatrix,
-        //     this.modelMatrix[0], this.modelMatrix[1], this.modelMatrix[2], 0,
-        //     this.modelMatrix[4], this.modelMatrix[5], this.modelMatrix[6], 0,
-        //     this.modelMatrix[8], this.modelMatrix[9], this.modelMatrix[10], 0,
-        //     this.transform.position.x, this.transform.position.y, this.transform.position.z, 1
-        // )
-
-
         switch (this.walkDir) {
             case 0:
-                mat4.set(
-                    this.modelMatrix,
-                    right[0], 0, -forward[0], 0,
-                    0, 1, 0, 0,
-                    right[2], 0, -forward[2], 0,
-                    this.transform.position.x, this.transform.position.y, this.transform.position.z, 1
+                this.setRotate(
+                    right[0], 0, -forward[0],
+                    0, 1, 0,
+                    right[2], 0, -forward[2],
                 )
                 break
             case 1:
-                mat4.set(
-                    this.modelMatrix,
-                    -right[0], 0, forward[0], 0,
-                    0, 1, 0, 0,
-                    -right[2], 0, forward[2], 0,
-                    this.transform.position.x, this.transform.position.y, this.transform.position.z, 1
+                this.setRotate(
+                    -right[0], 0, forward[0],
+                    0, 1, 0,
+                    -right[2], 0, forward[2],
                 )
                 break
             case 2:
-                mat4.set(
-                    this.modelMatrix,
-                    -forward[0], 0, -right[0], 0,
-                    0, 1, 0, 0,
-                    -forward[2], 0, -right[2], 0,
-                    this.transform.position.x, this.transform.position.y, this.transform.position.z, 1
+                this.setRotate(
+                    -forward[0], 0, -right[0],
+                    0, 1, 0,
+                    -forward[2], 0, -right[2],
                 )
                 break
             case 3:
-                mat4.set(
-                    this.modelMatrix,
-                    forward[0], 0, right[0], 0,
-                    0, 1, 0, 0,
-                    forward[2], 0, right[2], 0,
-                    this.transform.position.x, this.transform.position.y, this.transform.position.z, 1
+                this.setRotate(
+                    forward[0], 0, right[0],
+                    0, 1, 0,
+                    forward[2], 0, right[2],
                 )
                 break
         }
-
-        camera.updateMatrix()
     }
 
     jump() {
-        if (this.jumpCnt > 20)
-            this.translate(
-                0,
-                this.jumpForce,
-                0,
-                true
-            )
-        else if (this.jumpCnt > 0)
-            this.translate(
-                0,
-                -this.jumpForce,
-                0,
-                true
-            )
+        if (this.jumpCnt > 20) {
+            this.transform.position.y += this.jumpForce
+            this.collider.minY += this.jumpForce
+            this.collider.maxY += this.jumpForce
+        }
+        else if (this.jumpCnt > 0) {
+            this.transform.position.y -= this.jumpForce
+            this.collider.minY -= this.jumpForce
+            this.collider.maxY -= this.jumpForce
+        }
         else {
             this.isJump = false
             this.jumpCnt = 40 + 1

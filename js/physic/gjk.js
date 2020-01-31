@@ -64,31 +64,11 @@ var gjk = function (shape1, shape2) {
         }
     }
 
-    function dot(vec1, vec2) {
-        return vec1.x * vec2.x + vec1.y * vec2.y
-    }
-
-    function cross(vec1, vec2) {
-        return vec1.x * vec2.y - vec1.y * vec2.x
-    }
-
     function tripleProduct(a, b, c) {
         return {
             x: b.x * dot(a, c) - c.x * dot(a, b),
             y: b.y * dot(a, c) - c.y * dot(a, b)
         }
-    }
-
-    function normalize(vec) {
-        let size = Math.sqrt(vec.x ** 2 + vec.y ** 2)
-        return {
-            x: vec.x / size,
-            y: vec.y / size
-        }
-    }
-
-    function length(v) {
-        return Math.sqrt(v.x ** 2 + v.y ** 2)
     }
 
     function getNormalDir() {

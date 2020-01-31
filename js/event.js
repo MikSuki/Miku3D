@@ -1,5 +1,3 @@
-
-
 onkeydown = onkeyup = function (e) {
     key[e.keyCode] = e.type == 'keydown'
     // up
