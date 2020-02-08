@@ -16,7 +16,10 @@ onkeydown = onkeyup = function (e) {
         player.walkDir = -1
     // jump
     if (key[32]) {
-        if (player.isJump == false)
+        if (player.isJump == false){
             player.isJump = true
+            player.jumpCnt = 20
+            this.console.log('in')
+        }
     }
 }
